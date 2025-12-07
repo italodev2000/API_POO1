@@ -1,8 +1,8 @@
+from database.banco import Base
 from sqlalchemy import Column, Integer, String
-from database.banco import base_dados
 
 
-class Curso(base_dados):
+class Curso(Base):
     __tablename__ = "cursos"
 
     id = Column(Integer, primary_key=True)

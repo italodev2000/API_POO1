@@ -1,8 +1,8 @@
+from database.banco import Base
 from sqlalchemy import Column, Integer, String, ForeignKey
-from database.banco import base_dados
 
 
-class Matricula(base_dados):
+class Matricula(Base):
     __tablename__ = 'matricula'
 
     matricula = Column(Integer, primary_key=True)
