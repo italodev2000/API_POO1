@@ -1,41 +1,41 @@
-from database.banco import sessionlocal
-from models.models_alunos import Aluno
-from models.models_cursos import Curso
-from models.models_matricluas import Matricula
+# Conteúdo para app/services/regras_service.py (Refatorado)
+
+from app.models.models_alunos import Aluno
+# Assumindo que a classe Aluno está definida e importada corretamente
 
 
 class AlunoService:
 
-    def __init__(self, db_session):
-        self.db = db_session
+    # Função auxiliar para serializar o objeto Aluno em um dicionário
+    def _serializar_aluno(self, aluno: Aluno) -> dict:
+        """Converte um objeto Aluno do ORM em um dicionário para resposta JSON."""
+        return {
+            "id": aluno.id,
+            "nome": aluno.nome,
+            "email": aluno.email
+        }
 
-    def criar_novo_aluno(self, nome_aluno, cpf, data_nascimento, telefone_responsavel, email):
+    def listar(self, db):
+        """Busca todos os alunos e retorna uma lista de dicionários."""
+        alunos = db.query(Aluno).all()
+        # A lógica de formatação (serialização) é movida para o serviço
+        return [self._serializar_aluno(a) for a in alunos]
 
-        novo_aluno = Aluno(
-            nome_aluno=nome_aluno,
-            cpf=cpf,
-            data_nascimento=data_nascimento,
-            telefone_responsavel=telefone_responsavel,
-            email=email
-        )
-        try:
-            self.db.add(novo_aluno)
-            self.db.commit()
-            return novo_aluno
-        except Exception as e:
-            self.db.rollback()
-            print(f"Erro ao criar aluno: {e}")
-            return None
-        finally:
-            pass
+    def criar(self, db, nome, email):
+        """Cria um novo aluno no banco de dados e retorna o aluno serializado."""
+        aluno = Aluno(nome=nome, email=email)
+        db.add(aluno)
+        db.commit()
+        db.refresh(aluno)
+        # Retorna o aluno serializado
+        return self._serializar_aluno(aluno)
 
-    def buscar_aluno_por_nome_aluno(self, nome_aluno: str):
+    def buscar_aluno(self, db, nome_aluno):
+        """Busca alunos por nome e retorna uma lista de dicionários."""
+        # Correção: Adicionado .all() para executar a consulta
+        alunos_encontrados = db.query(Aluno).filter(
+            Aluno.nome == nome_aluno).all()
+        # db.commit() removido por ser desnecessário em operações de leitura
 
-        try:
-            aluno = (
-                self.db.query(Aluno)
-                .filter(Aluno.nome_aluno == nome_aluno).first())
-            return aluno
-        except Exception as e:
-            print(f"Erro ao buscar aluno por CPF: {e}")
-            return None
+        # Retorna a lista de alunos serializados
+        return [self._serializar_aluno(a) for a in alunos_encontrados]

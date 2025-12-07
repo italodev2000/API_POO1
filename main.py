@@ -1,13 +1,15 @@
-
 from flask import Flask
-from database.banco import base_dados, engine
-from app.models import models_alunos, models_cursos, models_matricluas
-
-base_dados.metadata.create_all(bind=engine)
+from app.controllers.routes_controllers import router
+from database.banco import Base, engine
 
 app = Flask(__name__)
-app.config['JSON_SORT_KEYS_'] = False
+
+# Criar tabelas
+Base.metadata.create_all(bind=engine)
+
+# Registrar rotas
+app.register_blueprint(router)
 
 
-if __name__ == '__main__':
-    app.run(port=7070, host='localhost')
+if __name__ == "__main__":
+    app.run(debug=True)
