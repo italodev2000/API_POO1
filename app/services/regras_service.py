@@ -1,102 +1,64 @@
-
 from app.models.models_alunos import Aluno
 from app.models.models_cursos import Curso
 from app.models.models_matricluas import Matricula
 
-from sqlalchemy.exc import IntegrityError as DBIntegrityError
-from sqlalchemy.exc import SQLAlchemyError as DBError
-from datetime import datetime
+from sqlalchemy.exc import SQLAlchemyError
 
 
-def _serializar_entidade(entidade) -> dict:
-
-    if not entidade:
-        return None
+def serializar_aluno(aluno):
     return {
-        "id": entidade.id,
-        "nome": getattr(entidade, 'nome', None),
-        "apresentacao": entidade.apresentar(),
+        "id": aluno.id,
+        "nome": aluno.nome,
+        "email": aluno.email
+    }
+
+
+def serializar_curso(curso):
+    return {
+        "id": curso.id,
+        "nome_curso": curso.nome_curso,
+        "carga_horaria": curso.carga_horaria,
+        "periodo": curso.periodo,
+        "mensalidade": curso.mensalidade
+    }
+
+
+def serializar_matricula(matricula):
+    return {
+        "id": matricula.id,
+        "aluno": matricula.aluno.nome if matricula.aluno else None,
+        "curso": matricula.curso.nome if matricula.curso else None,
+        "data_matricula": matricula.data_matricula.strftime("%d/%m/%Y %H:%M:%S")
     }
 
 
 class AlunoService:
-
     def listar(self, db):
+        alunos = db.query(Aluno).all()
+        return [serializar_aluno(a) for a in alunos]
 
-        try:
-            alunos = db.query(Aluno).all()
-            return [_serializar_entidade(a) for a in alunos]
-        except DBError as e:
-            print(f"Erro ao listar alunos: {e}")
-
-            return []
-        except Exception as e:
-            print(f"Erro inesperado ao listar: {e}")
-            return []
-
-    def criar(self, db, nome, email, matricula):
-
-        try:
-            aluno = Aluno(nome=nome, email=email, matricula=matricula)
-            db.add(aluno)
-            db.commit()
-            db.refresh(aluno)
-            return _serializar_entidade(aluno)
-        except DBIntegrityError:
-            db.rollback()
-
-            return {"erro": "Aluno com esta matrícula ou e-mail já existe."},
-        except DBError as e:
-            db.rollback()
-            print(f"Erro ao criar aluno: {e}")
-
-            return {"erro": "Erro interno ao salvar aluno."},
-        except Exception as e:
-            db.rollback()
-            print(f"Erro inesperado: {e}")
-            return {"erro": "Erro inesperado no serviço."},
+    def criar(self, db, nome, email):
+        novo_aluno = Aluno(nome=nome, email=email)
+        db.add(novo_aluno)
+        db.commit()
+        db.refresh(novo_aluno)
+        return serializar_aluno(novo_aluno)
 
 
 class CursoService:
-
     def listar_cursos(self, db):
+        cursos = db.query(Curso).all()
+        return [serializar_curso(c) for c in cursos]
 
-        try:
-            cursos = db.query(Curso).all()
-            return [_serializar_entidade(c) for c in cursos]
-        except DBError as e:
-            print(f"Erro ao listar cursos: {e}")
-            return []
+    def criar_curso(self, db, nome, descricao=None):
+        novo_curso = Curso(nome=nome, descricao=descricao)
+        db.add(novo_curso)
+        db.commit()
+        db.refresh(novo_curso)
+        return serializar_curso(novo_curso)
 
 
 class MatriculaService:
-
-    def _verificar_matricula_existente(self, db, aluno_id, curso_id):
-
-        try:
-            matricula = db.query(Matricula).filter(
-                Matricula.aluno_id == aluno_id,
-                Matricula.curso_id == curso_id
-            ).first()
-            return bool(matricula)
-        except DBError as e:
-            print(f"Erro ao verificar matrícula: {e}")
-
-            return True
-
-    def matricular_aluno(self, db, aluno_id, curso_id):
-
-        if self._verificar_matricula_existente(db, aluno_id, curso_id):
-            return {"erro": "Aluno já está matriculado neste curso."}, 400
-
-        try:
-            matricula = Matricula(
-                aluno_id=aluno_id, curso_id=curso_id, data_matricula=datetime.now())
-            db.add(matricula)
-            db.commit()
-            db.refresh(matricula)
-            return _serializar_entidade(matricula)
-        except DBError as e:
-            db.rollback()
-            print(f"Erro ao matricular aluno: {e}")
-            return {"erro": "Erro interno ao realizar matrícula."}, 500
+    def listar_matriculas(self, db):
+        matriculas = db.query(Matricula).all()
+        return [serializar_matricula(m) for m in matriculas]
